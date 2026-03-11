@@ -1,187 +1,279 @@
 import streamlit as st
+import streamlit.components.v1 as components
 
-# Set page config for a better look
 st.set_page_config(page_title="DRL HW1-1: Grid Map", layout="centered")
 
-# Aggressive and robust CSS to force premium dark theme and square grid
-st.markdown("""
-<style>
-    /* Dark Theme Background */
-    [data-testid="stAppViewContainer"] {
-        background-color: #0f172a;
-        background-image: 
-            radial-gradient(at 0% 0%, rgba(56, 189, 248, 0.15) 0, transparent 50%), 
-            radial-gradient(at 50% 0%, rgba(129, 140, 248, 0.1) 0, transparent 50%);
-    }
-    
-    [data-testid="stHeader"] { background: transparent; }
+# Embed the original Flask UI exactly
+html_content = """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: rgba(30, 41, 59, 0.7);
+            --accent-color: #38bdf8;
+            --text-color: #f1f5f9;
+            --grid-bg: #1e293b;
+            --start-color: #22c55e;
+            --end-color: #ef4444;
+            --obstacle-color: #64748b;
+            --empty-color: #334155;
+        }
 
-    /* Hide default Streamlit padding */
-    .block-container {
-        padding-top: 2rem !important;
-        max-width: 600px !important;
-    }
+        body {
+            background-color: var(--bg-color);
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(56, 189, 248, 0.15) 0, transparent 50%), 
+                radial-gradient(at 50% 0%, rgba(129, 140, 248, 0.1) 0, transparent 50%);
+            color: var(--text-color);
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            min-height: 100vh;
+            margin: 0;
+            padding-top: 20px;
+            overflow-x: hidden;
+        }
 
-    h1 {
-        background: linear-gradient(to right, #38bdf8, #818cf8);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        text-align: center;
-        font-weight: 800 !important;
-    }
+        .container {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 2rem;
+            border-radius: 1.5rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            text-align: center;
+            max-width: 600px;
+            width: 90%;
+        }
 
-    /* Selection Modes Info */
-    .stInfo {
-        background-color: rgba(30, 41, 59, 0.7) !important;
-        border: 1px solid rgba(255, 255, 255, 0.1) !important;
-        color: #f1f5f9 !important;
-        padding: 0.5rem 1rem !important;
-    }
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 1.5rem;
+            background: linear-gradient(to right, #38bdf8, #818cf8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 800;
+        }
 
-    /* Grid Buttons styling */
-    .stButton>button {
-        aspect-ratio: 1 / 1;
-        width: 100% !important;
-        height: auto !important;
-        min-height: 0px !important;
-        padding: 0 !important;
-        margin: 0 !important;
-        font-size: 1.2rem !important;
-        border-radius: 4px !important;
-        border: 1px solid rgba(255, 255, 255, 0.1) !important;
-        background-color: #334155 !important;
-        color: #94a3b8 !important;
-        transition: all 0.2s !important;
-    }
+        .controls {
+            margin-bottom: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
 
-    .stButton>button:hover {
-        transform: scale(1.05);
-        border-color: #38bdf8 !important;
-        box-shadow: 0 0 10px rgba(56, 189, 248, 0.3) !important;
-    }
+        .slider-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+        }
 
-    /* Target specific cell colors by their content S, E, X */
-    /* Note: Streamlit buttons often wrap the text in a p tag or similar */
-    button:has(div p:contains("S")) {
-        background-color: #22c55e !important;
-        color: white !important;
-        box-shadow: 0 0 15px #22c55e !important;
-    }
-    button:has(div p:contains("E")) {
-        background-color: #ef4444 !important;
-        color: white !important;
-        box-shadow: 0 0 15px #ef4444 !important;
-    }
-    button:has(div p:contains("X")) {
-        background-color: #64748b !important;
-        color: white !important;
-        box-shadow: 0 0 10px #64748b !important;
-    }
-    
-    /* Mode buttons - Primary type coloring */
-    div[data-testid="stColumn"] button[kind="primary"] {
-        background-color: #38bdf8 !important;
-        color: white !important;
-        box-shadow: 0 0 15px #38bdf8 !important;
-        border-color: #38bdf8 !important;
-    }
+        input[type="range"] {
+            accent-color: var(--accent-color);
+            width: 250px;
+        }
 
-    /* Column gaps */
-    div[data-testid="stColumn"] {
-        padding: 1px !important;
-    }
-</style>
-""", unsafe_allow_html=True)
+        .mode-selector {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
 
-st.title("Grid Map Developer")
+        .btn {
+            padding: 0.6rem 1.2rem;
+            border-radius: 0.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+            background: var(--empty-color);
+            color: #94a3b8;
+        }
 
-# Initialize session state
-if 'start_cell' not in st.session_state:
-    st.session_state.start_cell = None
-if 'end_cell' not in st.session_state:
-    st.session_state.end_cell = None
-if 'obstacles' not in st.session_state:
-    st.session_state.obstacles = set()
-if 'mode' not in st.session_state:
-    st.session_state.mode = "Start"
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+        }
 
-# Dimensions
-n = st.slider("Dimension (n)", 5, 9, 7)
-obs_limit = n - 2
+        .btn.active {
+            color: white;
+            border-color: transparent;
+        }
 
-# Reset obstacles if n changes significantly (optional logic improvement)
-# st.session_state.obstacles = {o for o in st.session_state.obstacles if o < n*n}
+        .btn-start.active { background: var(--start-color); box-shadow: 0 0 15px var(--start-color); }
+        .btn-end.active { background: var(--end-color); box-shadow: 0 0 15px var(--end-color); }
+        .btn-obstacle.active { background: var(--obstacle-color); box-shadow: 0 0 15px var(--obstacle-color); }
+        .btn-reset { background: #475569; color: white !important; margin-top: 10px; }
+        .btn-reset:hover { background: #64748b; }
 
-# Mode Selection
-col1, col2, col3 = st.columns(3)
-with col1:
-    if st.button("SET START", key="mode_start", use_container_width=True, 
-                 type="primary" if st.session_state.mode == "Start" else "secondary"):
-        st.session_state.mode = "Start"
-with col2:
-    if st.button("SET END", key="mode_end", use_container_width=True, 
-                 type="primary" if st.session_state.mode == "End" else "secondary"):
-        st.session_state.mode = "End"
-with col3:
-    if st.button("SET OBSTACLES", key="mode_obs", use_container_width=True, 
-                 type="primary" if st.session_state.mode == "Obstacle" else "secondary"):
-        st.session_state.mode = "Obstacle"
+        .grid {
+            display: grid;
+            gap: 8px;
+            margin: 0 auto;
+            padding: 1.5rem;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 1.5rem;
+            width: fit-content;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
 
-st.info(f"📍 Mode: **{st.session_state.mode}** | 🚧 Obstacles: **{len(st.session_state.obstacles)} / {obs_limit}**")
+        .cell {
+            width: 50px;
+            height: 50px;
+            background-color: var(--empty-color);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            color: white;
+            font-size: 1.2rem;
+        }
 
-# Grid Logic
-def handle_click(idx):
-    # Check if we are clicking a cell that is already something
-    is_start = idx == st.session_state.start_cell
-    is_end = idx == st.session_state.end_cell
-    is_obs = idx in st.session_state.obstacles
+        .cell:hover {
+            transform: scale(1.1);
+            z-index: 10;
+            border-color: var(--accent-color);
+        }
 
-    # If it's already what the current mode is, we REMOVE it (toggle off)
-    if (st.session_state.mode == "Start" and is_start) or \
-       (st.session_state.mode == "End" and is_end) or \
-       (st.session_state.mode == "Obstacle" and is_obs):
-        if is_start: st.session_state.start_cell = None
-        if is_end: st.session_state.end_cell = None
-        if is_obs: st.session_state.obstacles.remove(idx)
-        return
+        .cell.start { background-color: var(--start-color); box-shadow: 0 0 20px var(--start-color); border: none; }
+        .cell.end { background-color: var(--end-color); box-shadow: 0 0 20px var(--end-color); border: none; }
+        .cell.obstacle { background-color: var(--obstacle-color); box-shadow: 0 0 10px var(--obstacle-color); border: none; }
 
-    # Otherwise, clear its existing state and apply the new one
-    if is_start: st.session_state.start_cell = None
-    if is_end: st.session_state.end_cell = None
-    if is_obs: st.session_state.obstacles.remove(idx)
+        .info {
+            margin-top: 1.5rem;
+            font-size: 0.95rem;
+            color: #94a3b8;
+        }
+        
+        #obs-count { font-weight: 800; color: var(--accent-color); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Grid Map Developer</h1>
+        
+        <div class="controls">
+            <div class="slider-container">
+                <label>Dimension (n): <span id="n-val" style="color: var(--accent-color); font-weight: 800;">7</span></label>
+                <input type="range" id="grid-size" min="5" max="9" value="7">
+            </div>
 
-    if st.session_state.mode == "Start":
-        st.session_state.start_cell = idx
-    elif st.session_state.mode == "End":
-        st.session_state.end_cell = idx
-    elif st.session_state.mode == "Obstacle":
-        if len(st.session_state.obstacles) < obs_limit:
-            st.session_state.obstacles.add(idx)
-        else:
-            st.toast(f"Limit Reached: Max {obs_limit} obstacles!", icon="⚠️")
-
-# Draw Grid
-grid_container = st.container()
-with grid_container:
-    for r in range(n):
-        cols = st.columns(n, gap="small")
-        for c in range(n):
-            idx = r * n + c
+            <div class="mode-selector">
+                <button class="btn btn-start active" onclick="setMode('start')">Set Start</button>
+                <button class="btn btn-end" onclick="setMode('end')">Set End</button>
+                <button class="btn btn-obstacle" onclick="setMode('obstacle')">Set Obstacles</button>
+                <button class="btn btn-reset" onclick="resetGrid()">Reset Map</button>
+            </div>
             
-            label = " "
-            if idx == st.session_state.start_cell: label = "S"
-            elif idx == st.session_state.end_cell: label = "E"
-            elif idx in st.session_state.obstacles: label = "X"
+            <div class="info">
+                Obstacles: <span id="obs-count">0</span> / <span id="obs-limit">5</span>
+            </div>
+        </div>
+
+        <div id="grid" class="grid"></div>
+
+        <p class="info">Instructions: Select mode and click grid cells. Max n-2 obstacles.</p>
+    </div>
+
+    <script>
+        let n = 7;
+        let mode = 'start';
+        let startCell = null;
+        let endCell = null;
+        let obstacles = new Set();
+
+        const gridEl = document.getElementById('grid');
+        const sizeInput = document.getElementById('grid-size');
+        const nValEl = document.getElementById('n-val');
+        const obsCountEl = document.getElementById('obs-count');
+        const obsLimitEl = document.getElementById('obs-limit');
+        const modeButtons = document.querySelectorAll('.mode-selector .btn');
+
+        function initGrid() {
+            n = parseInt(sizeInput.value);
+            nValEl.innerText = n;
+            obsLimitEl.innerText = n - 2;
+            
+            resetGrid(); // Clear on size change or initial load
+        }
+
+        function resetGrid() {
+            startCell = null;
+            endCell = null;
+            obstacles.clear();
+            renderGrid();
+        }
+
+        function renderGrid() {
+            gridEl.style.gridTemplateColumns = `repeat(${n}, 50px)`;
+            gridEl.innerHTML = '';
+            
+            for (let i = 0; i < n * n; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                if (i === startCell) { cell.classList.add('start'); cell.innerText = 'S'; }
+                else if (i === endCell) { cell.classList.add('end'); cell.innerText = 'E'; }
+                else if (obstacles.has(i)) { cell.classList.add('obstacle'); cell.innerText = 'X'; }
                 
-            if cols[c].button(label, key=f"cell_{idx}", use_container_width=True):
-                handle_click(idx)
-                st.rerun()
+                cell.onclick = () => handleCellClick(i);
+                gridEl.appendChild(cell);
+            }
+            updateStats();
+        }
 
-if st.button("RESET MAP", use_container_width=True):
-    st.session_state.start_cell = None
-    st.session_state.end_cell = None
-    st.session_state.obstacles = set()
-    st.rerun()
+        function setMode(newMode) {
+            mode = newMode;
+            modeButtons.forEach(btn => btn.classList.remove('active'));
+            if (newMode !== 'reset') {
+                document.querySelector(`.btn-${newMode}`).classList.add('active');
+            }
+        }
 
-st.markdown("---")
-st.caption("Instructions: Click to toggle elements. Max $n-2$ obstacles. S=Start, E=End, X=Obstacle.")
+        function handleCellClick(index) {
+            // Toggle Logic: If clicking the same thing, remove it
+            if (index === startCell) startCell = null;
+            else if (index === endCell) endCell = null;
+            else if (obstacles.has(index)) obstacles.delete(index);
+            else {
+                // Otherwise clear its previous state and add new
+                if (mode === 'start') {
+                    startCell = index;
+                } else if (mode === 'end') {
+                    endCell = index;
+                } else if (mode === 'obstacle') {
+                    if (obstacles.size < (n - 2)) {
+                        obstacles.add(index);
+                    } else {
+                        alert(`Maximum ${n-2} obstacles allowed!`);
+                    }
+                }
+            }
+            renderGrid();
+        }
+
+        function updateStats() {
+            obsCountEl.innerText = obstacles.size;
+        }
+
+        sizeInput.oninput = initGrid;
+        initGrid();
+    </script>
+</body>
+</html>
+"""
+
+# Render the component
+components.html(html_content, height=850, scrolling=True)
