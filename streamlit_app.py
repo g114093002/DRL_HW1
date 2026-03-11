@@ -3,7 +3,7 @@ import streamlit as st
 # Set page config for a better look
 st.set_page_config(page_title="DRL HW1-1: Grid Map", layout="centered")
 
-# Aggressive CSS to force premium dark theme and square grid
+# Aggressive and robust CSS to force premium dark theme and square grid
 st.markdown("""
 <style>
     /* Dark Theme Background */
@@ -35,9 +35,10 @@ st.markdown("""
         background-color: rgba(30, 41, 59, 0.7) !important;
         border: 1px solid rgba(255, 255, 255, 0.1) !important;
         color: #f1f5f9 !important;
+        padding: 0.5rem 1rem !important;
     }
 
-    /* Force Grid Buttons to be Square and Dark */
+    /* Grid Buttons styling */
     .stButton>button {
         aspect-ratio: 1 / 1;
         width: 100% !important;
@@ -56,17 +57,35 @@ st.markdown("""
     .stButton>button:hover {
         transform: scale(1.05);
         border-color: #38bdf8 !important;
+        box-shadow: 0 0 10px rgba(56, 189, 248, 0.3) !important;
     }
 
-    /* Specialized Cell Colors */
-    /* We use the key to target buttons specifically if possible, 
-       but for Streamlit we'll rely on our python logic and primary/secondary types */
-    
-    /* Primary buttons are used for Start/End/Obstacles */
-    div[data-testid="stVerticalBlock"] div[data-testid="stHorizontalBlock"] button[kind="primary"] {
-        box-shadow: 0 0 15px currentColor;
+    /* Target specific cell colors by their content S, E, X */
+    /* Note: Streamlit buttons often wrap the text in a p tag or similar */
+    button:has(div p:contains("S")) {
+        background-color: #22c55e !important;
+        color: white !important;
+        box-shadow: 0 0 15px #22c55e !important;
+    }
+    button:has(div p:contains("E")) {
+        background-color: #ef4444 !important;
+        color: white !important;
+        box-shadow: 0 0 15px #ef4444 !important;
+    }
+    button:has(div p:contains("X")) {
+        background-color: #64748b !important;
+        color: white !important;
+        box-shadow: 0 0 10px #64748b !important;
     }
     
+    /* Mode buttons - Primary type coloring */
+    div[data-testid="stColumn"] button[kind="primary"] {
+        background-color: #38bdf8 !important;
+        color: white !important;
+        box-shadow: 0 0 15px #38bdf8 !important;
+        border-color: #38bdf8 !important;
+    }
+
     /* Column gaps */
     div[data-testid="stColumn"] {
         padding: 1px !important;
@@ -90,22 +109,21 @@ if 'mode' not in st.session_state:
 n = st.slider("Dimension (n)", 5, 9, 7)
 obs_limit = n - 2
 
-# Reset obstacles if n changes and exceeds limit
-if len(st.session_state.obstacles) > obs_limit:
-    st.session_state.obstacles = set()
+# Reset obstacles if n changes significantly (optional logic improvement)
+# st.session_state.obstacles = {o for o in st.session_state.obstacles if o < n*n}
 
 # Mode Selection
 col1, col2, col3 = st.columns(3)
 with col1:
-    if st.button("Set Start", key="mode_start", use_container_width=True, 
+    if st.button("SET START", key="mode_start", use_container_width=True, 
                  type="primary" if st.session_state.mode == "Start" else "secondary"):
         st.session_state.mode = "Start"
 with col2:
-    if st.button("Set End", key="mode_end", use_container_width=True, 
+    if st.button("SET END", key="mode_end", use_container_width=True, 
                  type="primary" if st.session_state.mode == "End" else "secondary"):
         st.session_state.mode = "End"
 with col3:
-    if st.button("Set Obstacles", key="mode_obs", use_container_width=True, 
+    if st.button("SET OBSTACLES", key="mode_obs", use_container_width=True, 
                  type="primary" if st.session_state.mode == "Obstacle" else "secondary"):
         st.session_state.mode = "Obstacle"
 
@@ -113,33 +131,34 @@ st.info(f"📍 Mode: **{st.session_state.mode}** | 🚧 Obstacles: **{len(st.ses
 
 # Grid Logic
 def handle_click(idx):
-    if idx == st.session_state.start_cell:
-        st.session_state.start_cell = None
-    elif idx == st.session_state.end_cell:
-        st.session_state.end_cell = None
-    elif idx in st.session_state.obstacles:
-        st.session_state.obstacles.remove(idx)
-    else:
-        if st.session_state.mode == "Start":
-            st.session_state.start_cell = idx
-        elif st.session_state.mode == "End":
-            st.session_state.end_cell = idx
-        elif st.session_state.mode == "Obstacle":
-            if len(st.session_state.obstacles) < obs_limit:
-                st.session_state.obstacles.add(idx)
-            else:
-                st.toast(f"Limit Reached: Max {obs_limit} obstacles!", icon="⚠️")
+    # Check if we are clicking a cell that is already something
+    is_start = idx == st.session_state.start_cell
+    is_end = idx == st.session_state.end_cell
+    is_obs = idx in st.session_state.obstacles
 
-# Injection of cell-specific CSS (Hack for dynamic colors in Streamlit)
-color_css = "<style>"
-if st.session_state.start_cell is not None:
-    color_css += f'div[data-testid="stColumn"] button[key="cell_{st.session_state.start_cell}"] {{ background-color: #22c55e !important; color: white !important; }}'
-if st.session_state.end_cell is not None:
-    color_css += f'div[data-testid="stColumn"] button[key="cell_{st.session_state.end_cell}"] {{ background-color: #ef4444 !important; color: white !important; }}'
-for obs in st.session_state.obstacles:
-    color_css += f'div[data-testid="stColumn"] button[key="cell_{obs}"] {{ background-color: #64748b !important; color: white !important; }}'
-color_css += "</style>"
-st.markdown(color_css, unsafe_allow_html=True)
+    # If it's already what the current mode is, we REMOVE it (toggle off)
+    if (st.session_state.mode == "Start" and is_start) or \
+       (st.session_state.mode == "End" and is_end) or \
+       (st.session_state.mode == "Obstacle" and is_obs):
+        if is_start: st.session_state.start_cell = None
+        if is_end: st.session_state.end_cell = None
+        if is_obs: st.session_state.obstacles.remove(idx)
+        return
+
+    # Otherwise, clear its existing state and apply the new one
+    if is_start: st.session_state.start_cell = None
+    if is_end: st.session_state.end_cell = None
+    if is_obs: st.session_state.obstacles.remove(idx)
+
+    if st.session_state.mode == "Start":
+        st.session_state.start_cell = idx
+    elif st.session_state.mode == "End":
+        st.session_state.end_cell = idx
+    elif st.session_state.mode == "Obstacle":
+        if len(st.session_state.obstacles) < obs_limit:
+            st.session_state.obstacles.add(idx)
+        else:
+            st.toast(f"Limit Reached: Max {obs_limit} obstacles!", icon="⚠️")
 
 # Draw Grid
 grid_container = st.container()
@@ -149,22 +168,20 @@ with grid_container:
         for c in range(n):
             idx = r * n + c
             
-            label = ""
-            btn_type = "secondary"
-            
-            if idx == st.session_state.start_cell:
-                label = "S"
-                btn_type = "primary"
-            elif idx == st.session_state.end_cell:
-                label = "E"
-                btn_type = "primary"
-            elif idx in st.session_state.obstacles:
-                label = "X"
-                btn_type = "primary"
+            label = " "
+            if idx == st.session_state.start_cell: label = "S"
+            elif idx == st.session_state.end_cell: label = "E"
+            elif idx in st.session_state.obstacles: label = "X"
                 
-            if cols[c].button(label if label else " ", key=f"cell_{idx}", use_container_width=True, type=btn_type):
+            if cols[c].button(label, key=f"cell_{idx}", use_container_width=True):
                 handle_click(idx)
                 st.rerun()
 
+if st.button("RESET MAP", use_container_width=True):
+    st.session_state.start_cell = None
+    st.session_state.end_cell = None
+    st.session_state.obstacles = set()
+    st.rerun()
+
 st.markdown("---")
-st.caption("Click cells to place elements. S=Start, E=End, X=Obstacle. Grid is restricted to $n-2$ obstacles.")
+st.caption("Instructions: Click to toggle elements. Max $n-2$ obstacles. S=Start, E=End, X=Obstacle.")
