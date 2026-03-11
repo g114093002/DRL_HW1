@@ -3,6 +3,36 @@ import streamlit.components.v1 as components
 
 st.set_page_config(page_title="DRL HW1-1: Grid Map", layout="centered")
 
+# Global CSS to unify background and remove Streamlit artifacts
+st.markdown("""
+<style>
+    /* Force main app background to match our dark theme */
+    [data-testid="stAppViewContainer"] {
+        background-color: #0f172a !important;
+        background-image: 
+            radial-gradient(at 0% 0%, rgba(56, 189, 248, 0.15) 0, transparent 50%), 
+            radial-gradient(at 50% 0%, rgba(129, 140, 248, 0.1) 0, transparent 50%) !important;
+        color: #f1f5f9 !important;
+    }
+
+    [data-testid="stHeader"] {
+        background: transparent !important;
+    }
+
+    /* Remove padding and make the content center naturally */
+    .block-container {
+        padding: 0 !important;
+        max-width: none !important;
+        display: flex;
+        justify-content: center;
+    }
+
+    /* Hide Streamlit footer and menu for a cleaner look */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+</style>
+""", unsafe_allow_html=True)
+
 # Embed the original Flask UI exactly
 html_content = """
 <!DOCTYPE html>
@@ -13,7 +43,7 @@ html_content = """
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-color: #0f172a;
+            --bg-color: transparent; /* Seamless blend */
             --card-bg: rgba(30, 41, 59, 0.7);
             --accent-color: #38bdf8;
             --text-color: #f1f5f9;
@@ -26,9 +56,6 @@ html_content = """
 
         body {
             background-color: var(--bg-color);
-            background-image: 
-                radial-gradient(at 0% 0%, rgba(56, 189, 248, 0.15) 0, transparent 50%), 
-                radial-gradient(at 50% 0%, rgba(129, 140, 248, 0.1) 0, transparent 50%);
             color: var(--text-color);
             font-family: 'Inter', system-ui, -apple-system, sans-serif;
             display: flex;
@@ -37,8 +64,8 @@ html_content = """
             justify-content: flex-start;
             min-height: 100vh;
             margin: 0;
-            padding-top: 20px;
-            overflow-x: hidden;
+            padding-top: 40px;
+            overflow: hidden; /* Avoid scrolls in iframe */
         }
 
         .container {
@@ -51,6 +78,12 @@ html_content = """
             text-align: center;
             max-width: 600px;
             width: 90%;
+            animation: fadeIn 0.5s ease-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         h1 {
@@ -102,6 +135,7 @@ html_content = """
         .btn:hover {
             transform: translateY(-2px);
             box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+            border-color: var(--accent-color);
         }
 
         .btn.active {
@@ -146,6 +180,7 @@ html_content = """
             transform: scale(1.1);
             z-index: 10;
             border-color: var(--accent-color);
+            background-color: #475569;
         }
 
         .cell.start { background-color: var(--start-color); box-shadow: 0 0 20px var(--start-color); border: none; }
@@ -185,7 +220,7 @@ html_content = """
 
         <div id="grid" class="grid"></div>
 
-        <p class="info">Instructions: Select mode and click grid cells. Max n-2 obstacles.</p>
+        <p class="info">Instructions: Click grid cells to place elements. Toggle to remove.</p>
     </div>
 
     <script>
@@ -207,7 +242,7 @@ html_content = """
             nValEl.innerText = n;
             obsLimitEl.innerText = n - 2;
             
-            resetGrid(); // Clear on size change or initial load
+            resetGrid();
         }
 
         function resetGrid() {
@@ -238,17 +273,16 @@ html_content = """
             mode = newMode;
             modeButtons.forEach(btn => btn.classList.remove('active'));
             if (newMode !== 'reset') {
-                document.querySelector(`.btn-${newMode}`).classList.add('active');
+                const activeBtn = document.querySelector(`.btn-${newMode}`);
+                if (activeBtn) activeBtn.classList.add('active');
             }
         }
 
         function handleCellClick(index) {
-            // Toggle Logic: If clicking the same thing, remove it
             if (index === startCell) startCell = null;
             else if (index === endCell) endCell = null;
             else if (obstacles.has(index)) obstacles.delete(index);
             else {
-                // Otherwise clear its previous state and add new
                 if (mode === 'start') {
                     startCell = index;
                 } else if (mode === 'end') {
@@ -275,5 +309,5 @@ html_content = """
 </html>
 """
 
-# Render the component
-components.html(html_content, height=850, scrolling=True)
+# Render the component with no borders and full height
+components.html(html_content, height=800, scrolling=False)
