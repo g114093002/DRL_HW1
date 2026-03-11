@@ -1,7 +1,7 @@
 import streamlit as st
 import streamlit.components.v1 as components
 
-st.set_page_config(page_title="DRL HW1-1: Grid Map", layout="centered")
+st.set_page_config(page_title="DRL HW1-2: Grid Map RL", layout="centered")
 
 # Global CSS to unify background and remove Streamlit artifacts
 st.markdown("""
@@ -33,7 +33,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Embed the original Flask UI exactly
+# Embed the complete HTML/JS Web App
 html_content = """
 <!DOCTYPE html>
 <html lang="en">
@@ -43,7 +43,7 @@ html_content = """
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-color: transparent; /* Seamless blend */
+            --bg-color: transparent; 
             --card-bg: rgba(30, 41, 59, 0.7);
             --accent-color: #38bdf8;
             --text-color: #f1f5f9;
@@ -52,6 +52,7 @@ html_content = """
             --end-color: #ef4444;
             --obstacle-color: #64748b;
             --empty-color: #334155;
+            --policy-color: #818cf8;
         }
 
         body {
@@ -65,7 +66,7 @@ html_content = """
             min-height: 100vh;
             margin: 0;
             padding-top: 40px;
-            overflow: hidden; /* Avoid scrolls in iframe */
+            overflow: hidden; 
         }
 
         .container {
@@ -76,8 +77,8 @@ html_content = """
             border-radius: 1.5rem;
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
             text-align: center;
-            max-width: 600px;
-            width: 90%;
+            max-width: 650px;
+            width: 95%;
             animation: fadeIn 0.5s ease-out;
         }
         
@@ -149,6 +150,53 @@ html_content = """
         .btn-reset { background: #475569; color: white !important; margin-top: 10px; }
         .btn-reset:hover { background: #64748b; }
 
+        /* RL Action Buttons */
+        .action-container {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-top: 0.5rem;
+            flex-wrap: wrap;
+        }
+        .btn-action {
+            background: #4f46e5;
+            color: white !important;
+            border-color: transparent;
+        }
+        .btn-action:hover {
+            background: #4338ca;
+            box-shadow: 0 0 15px rgba(79, 70, 229, 0.6);
+        }
+
+        /* View Toggles */
+        .view-toggles {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            align-items: center;
+            margin-top: 0.5rem;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 0.8rem 1rem;
+            border-radius: 0.8rem;
+        }
+        .view-toggles label {
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-weight: 600;
+            color: #cbd5e1;
+            transition: color 0.2s;
+        }
+        .view-toggles label:hover {
+            color: white;
+        }
+        .view-toggles input[type="radio"] {
+            accent-color: var(--accent-color);
+            transform: scale(1.2);
+            cursor: pointer;
+        }
+
         .grid {
             display: grid;
             gap: 8px;
@@ -174,6 +222,7 @@ html_content = """
             font-weight: 800;
             color: white;
             font-size: 1.2rem;
+            user-select: none;
         }
 
         .cell:hover {
@@ -183,12 +232,27 @@ html_content = """
             background-color: #475569;
         }
 
-        .cell.start { background-color: var(--start-color); box-shadow: 0 0 20px var(--start-color); border: none; }
-        .cell.end { background-color: var(--end-color); box-shadow: 0 0 20px var(--end-color); border: none; }
+        .cell.start { background-color: var(--start-color); box-shadow: 0 0 15px var(--start-color); border: none; }
+        .cell.end { background-color: var(--end-color); box-shadow: 0 0 15px var(--end-color); border: none; }
         .cell.obstacle { background-color: var(--obstacle-color); box-shadow: 0 0 10px var(--obstacle-color); border: none; }
 
+        .cell.policy-view {
+            font-size: 1.8rem;
+            font-weight: 400;
+            color: var(--policy-color);
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+        
+        .cell.value-view {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #f1f5f9;
+            background-color: rgba(56, 189, 248, 0.1);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+        }
+
         .info {
-            margin-top: 1.5rem;
+            margin-top: 1rem;
             font-size: 0.95rem;
             color: #94a3b8;
         }
@@ -198,7 +262,7 @@ html_content = """
 </head>
 <body>
     <div class="container">
-        <h1>Grid Map Developer</h1>
+        <h1>Grid Map & RL Evaluator</h1>
         
         <div class="controls">
             <div class="slider-container">
@@ -207,20 +271,30 @@ html_content = """
             </div>
 
             <div class="mode-selector">
-                <button class="btn btn-start active" onclick="setMode('start')">Set Start</button>
-                <button class="btn btn-end" onclick="setMode('end')">Set End</button>
-                <button class="btn btn-obstacle" onclick="setMode('obstacle')">Set Obstacles</button>
+                <button class="btn btn-start active" onclick="setMode('start')">Set Start (S)</button>
+                <button class="btn btn-end" onclick="setMode('end')">Set End (E)</button>
+                <button class="btn btn-obstacle" onclick="setMode('obstacle')">Set Obstacles (X)</button>
                 <button class="btn btn-reset" onclick="resetGrid()">Reset Map</button>
             </div>
             
-            <div class="info">
+            <div class="info" style="margin-top: 0;">
                 Obstacles: <span id="obs-count">0</span> / <span id="obs-limit">5</span>
+            </div>
+
+            <div class="action-container">
+                <button class="btn btn-action" onclick="generateRandomPolicy()">🎲 1. Generate Random Policy</button>
+                <button class="btn btn-action" onclick="evaluatePolicy()">🧮 2. Evaluate V(s)</button>
+            </div>
+
+            <div class="view-toggles">
+                <label><input type="radio" name="view" value="map" checked onchange="changeView('map')"> 🗺️ Map</label>
+                <label><input type="radio" name="view" value="policy" onchange="changeView('policy')"> 🧭 Policy</label>
+                <label><input type="radio" name="view" value="value" onchange="changeView('value')"> 📊 Value</label>
             </div>
         </div>
 
         <div id="grid" class="grid"></div>
-
-        <p class="info">Instructions: Click grid cells to place elements. Toggle to remove.</p>
+        <p class="info" id="status-text" style="color: var(--accent-color);">Instructions: Design your map, generate a random policy, and evaluate it.</p>
     </div>
 
     <script>
@@ -229,6 +303,14 @@ html_content = """
         let startCell = null;
         let endCell = null;
         let obstacles = new Set();
+        
+        let policy = {};
+        let values = {};
+        let displayMode = 'map'; // 'map', 'policy', 'value'
+
+        const directions = ['↑', '↓', '←', '→'];
+        const dr = [-1, 1, 0, 0];
+        const dc = [0, 0, -1, 1];
 
         const gridEl = document.getElementById('grid');
         const sizeInput = document.getElementById('grid-size');
@@ -236,6 +318,7 @@ html_content = """
         const obsCountEl = document.getElementById('obs-count');
         const obsLimitEl = document.getElementById('obs-limit');
         const modeButtons = document.querySelectorAll('.mode-selector .btn');
+        const statusText = document.getElementById('status-text');
 
         function initGrid() {
             n = parseInt(sizeInput.value);
@@ -249,7 +332,101 @@ html_content = """
             startCell = null;
             endCell = null;
             obstacles.clear();
+            policy = {};
+            values = {};
+            document.querySelector(`input[value="map"]`).checked = true;
+            displayMode = 'map';
+            statusText.innerText = "Instructions: Click cells to place S/E/X. Then evaluate.";
+            statusText.style.color = 'var(--text-color)';
             renderGrid();
+        }
+        
+        function changeView(newMode) {
+            displayMode = newMode;
+            renderGrid();
+        }
+
+        function generateRandomPolicy() {
+            policy = {};
+            for (let i = 0; i < n * n; i++) {
+                if (!obstacles.has(i) && i !== endCell) {
+                    policy[i] = Math.floor(Math.random() * 4);
+                }
+            }
+            document.querySelector(`input[value="policy"]`).checked = true;
+            changeView('policy');
+            statusText.innerText = "Status: Random Policy Generated.";
+            statusText.style.color = 'var(--accent-color)';
+        }
+
+        function evaluatePolicy() {
+            if (Object.keys(policy).length === 0) {
+                generateRandomPolicy(); // Auto-generate if not present
+            }
+
+            // Init values
+            for (let i = 0; i < n * n; i++) {
+                values[i] = 0.0;
+            }
+
+            // --- RL Parameters (Adjust logic here if needed by homework) ---
+            const gamma = 0.9;
+            const stepReward = -1;
+            const goalReward = 10;
+            const theta = 1e-4;
+            // -------------------------------------------------------------
+
+            let delta = 1;
+            let iterations = 0;
+            
+            while (delta > theta && iterations < 2000) {
+                delta = 0;
+                let newValues = {...values};
+
+                for (let i = 0; i < n * n; i++) {
+                    if (obstacles.has(i)) continue;
+                    
+                    // Terminal state mapping (End Cell)
+                    if (i === endCell) {
+                        newValues[i] = 0.0;
+                        continue;
+                    }
+
+                    let act = policy[i];
+                    if (act === undefined) {
+                        act = Math.floor(Math.random() * 4);
+                        policy[i] = act;
+                    }
+
+                    let r = Math.floor(i / n);
+                    let c = i % n;
+                    
+                    let nr = r + dr[act];
+                    let nc = c + dc[act];
+                    let next_i = nr * n + nc;
+
+                    // Bounds and Obstacles Check (Bounce back)
+                    if (nr < 0 || nr >= n || nc < 0 || nc >= n || obstacles.has(next_i)) {
+                        next_i = i; 
+                    }
+
+                    let reward = stepReward;
+                    if (next_i === endCell) {
+                        reward = goalReward;
+                    }
+
+                    let v = reward + gamma * values[next_i];
+                    delta = Math.max(delta, Math.abs(v - values[i]));
+                    newValues[i] = v;
+                }
+                values = newValues;
+                iterations++;
+            }
+            
+            document.querySelector(`input[value="value"]`).checked = true;
+            changeView('value');
+            statusText.innerText = `Status: Policy Evaluated! Converged in ${iterations} iterations.`;
+            statusText.style.color = '#22c55e';
         }
 
         function renderGrid() {
@@ -259,11 +436,45 @@ html_content = """
             for (let i = 0; i < n * n; i++) {
                 const cell = document.createElement('div');
                 cell.className = 'cell';
-                if (i === startCell) { cell.classList.add('start'); cell.innerText = 'S'; }
-                else if (i === endCell) { cell.classList.add('end'); cell.innerText = 'E'; }
-                else if (obstacles.has(i)) { cell.classList.add('obstacle'); cell.innerText = 'X'; }
                 
-                cell.onclick = () => handleCellClick(i);
+                if (displayMode === 'map') {
+                    if (i === startCell) { cell.classList.add('start'); cell.innerText = 'S'; }
+                    else if (i === endCell) { cell.classList.add('end'); cell.innerText = 'E'; }
+                    else if (obstacles.has(i)) { cell.classList.add('obstacle'); cell.innerText = 'X'; }
+                } 
+                else if (displayMode === 'policy') {
+                    if (obstacles.has(i)) { cell.classList.add('obstacle'); }
+                    else if (i === endCell) { cell.classList.add('end'); cell.innerText = 'E'; }
+                    else {
+                        cell.classList.add('policy-view');
+                        if (i in policy) {
+                            cell.innerText = directions[policy[i]];
+                            if (i === startCell) cell.style.color = 'var(--start-color)';
+                        }
+                    }
+                } 
+                else if (displayMode === 'value') {
+                    if (obstacles.has(i)) { cell.classList.add('obstacle'); }
+                    else if (i === endCell) { 
+                        cell.classList.add('end'); 
+                        cell.innerText = '0.0'; 
+                    }
+                    else {
+                        cell.classList.add('value-view');
+                        if (i in values) {
+                            cell.innerText = values[i].toFixed(2);
+                            if (i === startCell) cell.style.color = 'var(--start-color)';
+                        }
+                    }
+                }
+                
+                cell.onclick = () => {
+                    if (displayMode !== 'map') {
+                        document.querySelector(`input[value="map"]`).checked = true;
+                        changeView('map');
+                    }
+                    handleCellClick(i);
+                };
                 gridEl.appendChild(cell);
             }
             updateStats();
@@ -275,6 +486,10 @@ html_content = """
             if (newMode !== 'reset') {
                 const activeBtn = document.querySelector(`.btn-${newMode}`);
                 if (activeBtn) activeBtn.classList.add('active');
+            }
+            if (displayMode !== 'map') {
+                document.querySelector(`input[value="map"]`).checked = true;
+                changeView('map');
             }
         }
 
@@ -291,10 +506,17 @@ html_content = """
                     if (obstacles.size < (n - 2)) {
                         obstacles.add(index);
                     } else {
-                        alert(`Maximum ${n-2} obstacles allowed!`);
+                        alert(`Maximum ${n - 2} obstacles allowed!`);
                     }
                 }
             }
+            
+            // Clear evaluation results on edit
+            policy = {};
+            values = {};
+            statusText.innerText = "Status: Map modified. Please re-generate policy and evaluate.";
+            statusText.style.color = 'var(--text-color)';
+
             renderGrid();
         }
 
@@ -309,5 +531,5 @@ html_content = """
 </html>
 """
 
-# Render the component with no borders and full height
-components.html(html_content, height=800, scrolling=False)
+# Render the component with no borders and increased height for extra UI
+components.html(html_content, height=1000, scrolling=False)
