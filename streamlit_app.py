@@ -292,8 +292,7 @@ html_content = """
 
             <div class="action-container">
                 <button class="btn btn-action" onclick="generateRandomPolicy()">🎲 1. Random Policy</button>
-                <button class="btn btn-action" onclick="evaluatePolicy()">🧮 2. Evaluate V(s)</button>
-                <button class="btn btn-action btn-optimize" onclick="optimizePolicy()">🎯 3. Optimize V*(s)</button>
+                <button class="btn btn-action btn-optimize" onclick="optimizePolicy()">🎯 2. Evaluate V(s)</button>
             </div>
 
             <div class="view-toggles">
