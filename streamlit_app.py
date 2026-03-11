@@ -162,10 +162,19 @@ html_content = """
             background: #4f46e5;
             color: white !important;
             border-color: transparent;
+            font-size: 0.9rem;
+            padding: 0.5rem 1rem;
         }
         .btn-action:hover {
             background: #4338ca;
             box-shadow: 0 0 15px rgba(79, 70, 229, 0.6);
+        }
+        .btn-optimize {
+            background: #0ea5e9;
+        }
+        .btn-optimize:hover {
+            background: #0284c7;
+            box-shadow: 0 0 15px rgba(14, 165, 233, 0.6);
         }
 
         /* View Toggles */
@@ -282,8 +291,9 @@ html_content = """
             </div>
 
             <div class="action-container">
-                <button class="btn btn-action" onclick="generateRandomPolicy()">🎲 1. Generate Random Policy</button>
+                <button class="btn btn-action" onclick="generateRandomPolicy()">🎲 1. Random Policy</button>
                 <button class="btn btn-action" onclick="evaluatePolicy()">🧮 2. Evaluate V(s)</button>
+                <button class="btn btn-action btn-optimize" onclick="optimizePolicy()">🎯 3. Optimize V*(s)</button>
             </div>
 
             <div class="view-toggles">
@@ -369,12 +379,11 @@ html_content = """
                 values[i] = 0.0;
             }
 
-            // --- RL Parameters (Adjust logic here if needed by homework) ---
+            // --- RL Parameters ---
             const gamma = 0.9;
             const stepReward = -1;
             const goalReward = 10;
             const theta = 1e-4;
-            // -------------------------------------------------------------
 
             let delta = 1;
             let iterations = 0;
@@ -386,7 +395,6 @@ html_content = """
                 for (let i = 0; i < n * n; i++) {
                     if (obstacles.has(i)) continue;
                     
-                    // Terminal state mapping (End Cell)
                     if (i === endCell) {
                         newValues[i] = 0.0;
                         continue;
@@ -400,12 +408,10 @@ html_content = """
 
                     let r = Math.floor(i / n);
                     let c = i % n;
-                    
                     let nr = r + dr[act];
                     let nc = c + dc[act];
                     let next_i = nr * n + nc;
 
-                    // Bounds and Obstacles Check (Bounce back)
                     if (nr < 0 || nr >= n || nc < 0 || nc >= n || obstacles.has(next_i)) {
                         next_i = i; 
                     }
@@ -425,8 +431,73 @@ html_content = """
             
             document.querySelector(`input[value="value"]`).checked = true;
             changeView('value');
-            statusText.innerText = `Status: Policy Evaluated! Converged in ${iterations} iterations.`;
-            statusText.style.color = '#22c55e';
+            statusText.innerText = `Status: Random Policy Evaluated in ${iterations} iters. (Values might be low as random policy rarely reaches goal).`;
+            statusText.style.color = '#f59e0b'; // warning color
+        }
+
+        function optimizePolicy() {
+            // Value Iteration
+            for (let i = 0; i < n * n; i++) values[i] = 0.0;
+
+            const gamma = 0.9;
+            const stepReward = -1;
+            const goalReward = 10;
+            const theta = 1e-4;
+
+            let delta = 1;
+            let iterations = 0;
+            
+            while (delta > theta && iterations < 2000) {
+                delta = 0;
+                let newValues = {...values};
+
+                for (let i = 0; i < n * n; i++) {
+                    if (obstacles.has(i)) continue;
+                    
+                    if (i === endCell) {
+                        newValues[i] = 0.0;
+                        continue;
+                    }
+
+                    let max_v = -Infinity;
+                    let best_act = 0;
+                    
+                    let r = Math.floor(i / n);
+                    let c = i % n;
+
+                    for (let act = 0; act < 4; act++) {
+                        let nr = r + dr[act];
+                        let nc = c + dc[act];
+                        let next_i = nr * n + nc;
+
+                        if (nr < 0 || nr >= n || nc < 0 || nc >= n || obstacles.has(next_i)) {
+                            next_i = i;
+                        }
+
+                        let reward = stepReward;
+                        if (next_i === endCell) {
+                            reward = goalReward;
+                        }
+
+                        let v = reward + gamma * values[next_i];
+                        if (v > max_v) {
+                            max_v = v;
+                            best_act = act;
+                        }
+                    }
+
+                    delta = Math.max(delta, Math.abs(max_v - values[i]));
+                    newValues[i] = max_v;
+                    policy[i] = best_act; // Update to greedy policy
+                }
+                values = newValues;
+                iterations++;
+            }
+            
+            document.querySelector(`input[value="value"]`).checked = true;
+            changeView('value');
+            statusText.innerText = `Status: Optimal Policy Found! V*(s) converged in ${iterations} operations. Goal is now the maximal target.`;
+            statusText.style.color = '#22c55e'; // success color
         }
 
         function renderGrid() {
