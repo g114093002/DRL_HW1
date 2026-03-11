@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DRL HW1-1: Grid Map</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Grid Map Developer</h1>
+        
+        <div class="controls">
+            <div class="slider-container">
+                <label for="grid-size">Dimension (n): <span id="n-val">7</span></label>
+                <input type="range" id="grid-size" min="5" max="9" value="7">
+            </div>
+
+            <div class="mode-selector">
+                <button class="btn btn-start active" onclick="setMode('start')">Set Start</button>
+                <button class="btn btn-end" onclick="setMode('end')">Set End</button>
+                <button class="btn btn-obstacle" onclick="setMode('obstacle')">Set Obstacles</button>
+            </div>
+            
+            <div id="status-msg" class="info">
+                Obstacles: <span id="obs-count">0</span> / <span id="obs-limit">5</span>
+            </div>
+        </div>
+
+        <div id="grid" class="grid"></div>
+
+        <div class="info">
+            <p>Click cells to place elements based on active mode.</p>
+        </div>
+    </div>
+
+    <script>
+        let n = 7;
+        let mode = 'start';
+        let startCell = null;
+        let endCell = null;
+        let obstacles = new Set();
+
+        const gridEl = document.getElementById('grid');
+        const sizeInput = document.getElementById('grid-size');
+        const nValEl = document.getElementById('n-val');
+        const obsCountEl = document.getElementById('obs-count');
+        const obsLimitEl = document.getElementById('obs-limit');
+        const modeButtons = document.querySelectorAll('.mode-selector .btn');
+
+        function initGrid() {
+            n = parseInt(sizeInput.value);
+            nValEl.innerText = n;
+            obsLimitEl.innerText = n - 2;
+            
+            // Clear selections if n changes (optional, but cleaner for state)
+            startCell = null;
+            endCell = null;
+            obstacles.clear();
+            updateStats();
+
+            gridEl.style.gridTemplateColumns = `repeat(${n}, 50px)`;
+            gridEl.innerHTML = '';
+            
+            for (let i = 0; i < n * n; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                cell.dataset.index = i;
+                cell.onclick = () => handleCellClick(i, cell);
+                gridEl.appendChild(cell);
+            }
+        }
+
+        function setMode(newMode) {
+            mode = newMode;
+            modeButtons.forEach(btn => btn.classList.remove('active'));
+            document.querySelector(`.btn-${newMode}`).classList.add('active');
+        }
+
+        function handleCellClick(index, cellEl) {
+            // Remove existing markings if this cell is already something
+            if (index === startCell) startCell = null;
+            if (index === endCell) endCell = null;
+            obstacles.delete(index);
+            cellEl.classList.remove('start', 'end', 'obstacle');
+
+            if (mode === 'start') {
+                // Clear previous start
+                const prevStart = document.querySelector('.cell.start');
+                if (prevStart) prevStart.classList.remove('start');
+                
+                startCell = index;
+                cellEl.classList.add('start');
+            } else if (mode === 'end') {
+                // Clear previous end
+                const prevEnd = document.querySelector('.cell.end');
+                if (prevEnd) prevEnd.classList.remove('end');
+                
+                endCell = index;
+                cellEl.classList.add('end');
+            } else if (mode === 'obstacle') {
+                if (obstacles.size < (n - 2)) {
+                    obstacles.add(index);
+                    cellEl.classList.add('obstacle');
+                } else {
+                    alert(`Maximum ${n-2} obstacles allowed for n=${n}`);
+                }
+            }
+            updateStats();
+        }
+
+        function updateStats() {
+            obsCountEl.innerText = obstacles.size;
+        }
+
+        sizeInput.oninput = initGrid;
+        initGrid();
+    </script>
+</body>
+</html>
