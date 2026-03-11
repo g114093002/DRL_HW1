@@ -24,12 +24,11 @@ This repository contains the implementation for **HW1-1: Grid Map Development**.
    ```
 
 3. **Run the application**:
-   ```bash
-   python app.py
-   ```
+   - For Flask version: `python app.py`
+   - For Streamlit version: `streamlit run streamlit_app.py`
 
-4. **Open in browser**:
-   Navigate to `http://127.0.0.1:5000`
+4. **Streamlit Cloud Deployment**: 
+   When deploying to Streamlit Cloud, set the **Main file path** to `streamlit_app.py`.
 
 ## Deployment to Streamlit
 Although developed with Flask, to host on **Streamlit Cloud**, you would typically need a Streamlit version of the code (`streamlit_app.py`). 
