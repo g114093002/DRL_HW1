@@ -239,6 +239,7 @@ html_content = """
             color: white;
             font-size: 1.2rem;
             user-select: none;
+            position: relative;
         }
 
         .cell:hover {
@@ -255,8 +256,16 @@ html_content = """
         .cell.policy-view {
             font-size: 1.8rem;
             font-weight: 400;
-            color: var(--policy-color);
+            color: #94a3b8;
             background-color: rgba(255, 255, 255, 0.05);
+        }
+
+        .cell.optimal-path {
+            background-color: #4ade80 !important;
+            color: #0f172a !important;
+            font-weight: 800 !important;
+            border-color: #22c55e !important;
+            box-shadow: 0 0 10px rgba(74, 222, 128, 0.4);
         }
         
         .cell.value-view {
@@ -323,6 +332,7 @@ html_content = """
         
         let policy = {};
         let values = {};
+        let optimalPath = new Set();
         let displayMode = 'map'; // 'map', 'policy', 'value'
 
         const directions = ['↑', '↓', '←', '→'];
@@ -351,6 +361,7 @@ html_content = """
             obstacles.clear();
             policy = {};
             values = {};
+            optimalPath.clear();
             document.querySelector(`input[value="map"]`).checked = true;
             displayMode = 'map';
             statusText.innerText = "Instructions: Click cells to place S/E/X. Then evaluate.";
@@ -365,6 +376,7 @@ html_content = """
 
         function generateRandomPolicy() {
             policy = {};
+            optimalPath.clear();
             for (let i = 0; i < n * n; i++) {
                 if (!obstacles.has(i) && i !== endCell) {
                     policy[i] = Math.floor(Math.random() * 4);
@@ -436,6 +448,7 @@ html_content = """
                 iterations++;
             }
             
+            computeOptimalPath();
             document.querySelector(`input[value="value"]`).checked = true;
             changeView('value');
             statusText.innerText = `Status: Policy Evaluated in ${iterations} iters. (Values might be low if actions are random).`;
@@ -501,10 +514,43 @@ html_content = """
                 iterations++;
             }
             
-            document.querySelector(`input[value="value"]`).checked = true;
-            changeView('value');
-            statusText.innerText = `Status: Optimal Policy Found! V*(s) converged in ${iterations} operations. Switch to 'Policy' view to see optimal paths.`;
+            computeOptimalPath();
+            document.querySelector(`input[value="policy"]`).checked = true;
+            changeView('policy');
+            statusText.innerText = `Status: Optimal Policy Found! V*(s) converged in ${iterations} operations. Displaying optimal paths.`;
             statusText.style.color = '#22c55e'; // success color
+        }
+
+        function computeOptimalPath() {
+            optimalPath.clear();
+            if (startCell === null || endCell === null) return;
+            
+            let current = startCell;
+            let visited = new Set();
+            
+            while (current !== endCell) {
+                if (visited.has(current)) break; // prevent infinite loops
+                
+                let act = policy[current];
+                if (act === undefined) break;
+                
+                optimalPath.add(current);
+                visited.add(current);
+                
+                let r = Math.floor(current / n);
+                let c = current % n;
+                let nr = r + dr[act];
+                let nc = c + dc[act];
+                
+                let next_i = nr * n + nc;
+                if (nr < 0 || nr >= n || nc < 0 || nc >= n || obstacles.has(next_i)) {
+                    break;
+                }
+                current = next_i;
+            }
+            if (current === endCell) {
+                optimalPath.add(current);
+            }
         }
 
         function renderGrid() {
@@ -521,14 +567,32 @@ html_content = """
                     else if (obstacles.has(i)) { cell.classList.add('obstacle'); cell.innerText = 'X'; }
                 } 
                 else if (displayMode === 'policy') {
-                    if (obstacles.has(i)) { cell.classList.add('obstacle'); }
-                    else if (i === endCell) { cell.classList.add('end'); cell.innerText = 'E'; }
-                    else {
+                    if (obstacles.has(i)) { 
+                        cell.classList.add('obstacle'); 
+                    } else {
                         cell.classList.add('policy-view');
-                        if (i in policy) {
-                            cell.innerText = directions[policy[i]];
-                            if (i === startCell) cell.style.color = 'var(--start-color)';
+                        if (optimalPath.has(i)) {
+                            cell.classList.add('optimal-path');
                         }
+                        
+                        let content = '';
+                        if (i === startCell) {
+                            content += '<div style="font-size: 0.45rem; position: absolute; top: 4px; left: 4px; font-weight: 800; color: inherit;">START</div>';
+                        }
+                        
+                        if (i in policy) {
+                            content += `<span>${directions[policy[i]]}</span>`;
+                        } else if (i === endCell) {
+                            content += `<span>E</span>`;
+                        } else {
+                            content += `<span>-</span>`;
+                        }
+                        
+                        if (i === endCell) {
+                            content += '<div style="font-size: 0.45rem; position: absolute; bottom: 4px; right: 4px; font-weight: 800; color: inherit;">END</div>';
+                        }
+                        
+                        cell.innerHTML = content;
                     }
                 } 
                 else if (displayMode === 'value') {
@@ -592,6 +656,7 @@ html_content = """
             // Clear evaluation results on edit
             policy = {};
             values = {};
+            optimalPath.clear();
             statusText.innerText = "Status: Map modified. Please re-generate policy and evaluate.";
             statusText.style.color = 'var(--text-color)';
 
