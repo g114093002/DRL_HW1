@@ -169,6 +169,13 @@ html_content = """
             background: #4338ca;
             box-shadow: 0 0 15px rgba(79, 70, 229, 0.6);
         }
+        .btn-evaluate {
+            background: #10b981;
+        }
+        .btn-evaluate:hover {
+            background: #059669;
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.6);
+        }
         .btn-optimize {
             background: #0ea5e9;
         }
@@ -292,7 +299,8 @@ html_content = """
 
             <div class="action-container">
                 <button class="btn btn-action" onclick="generateRandomPolicy()">🎲 1. Random Policy</button>
-                <button class="btn btn-action btn-optimize" onclick="optimizePolicy()">🎯 2. Evaluate V(s)</button>
+                <button class="btn btn-action btn-evaluate" onclick="evaluatePolicy()">🎯 2. Evaluate Policy</button>
+                <button class="btn btn-action btn-optimize" onclick="optimizePolicy()">✨ 3. Value Iteration</button>
             </div>
 
             <div class="view-toggles">
@@ -303,7 +311,7 @@ html_content = """
         </div>
 
         <div id="grid" class="grid"></div>
-        <p class="info" id="status-text" style="color: var(--accent-color);">Instructions: Design your map, generate a random policy, and evaluate it.</p>
+        <p class="info" id="status-text" style="color: var(--accent-color);">Instructions: Design your map, generate a random policy, evaluate it, or run Value Iteration.</p>
     </div>
 
     <script>
@@ -430,7 +438,7 @@ html_content = """
             
             document.querySelector(`input[value="value"]`).checked = true;
             changeView('value');
-            statusText.innerText = `Status: Random Policy Evaluated in ${iterations} iters. (Values might be low as random policy rarely reaches goal).`;
+            statusText.innerText = `Status: Policy Evaluated in ${iterations} iters. (Values might be low if actions are random).`;
             statusText.style.color = '#f59e0b'; // warning color
         }
 
@@ -495,7 +503,7 @@ html_content = """
             
             document.querySelector(`input[value="value"]`).checked = true;
             changeView('value');
-            statusText.innerText = `Status: Optimal Policy Found! V*(s) converged in ${iterations} operations. Goal is now the maximal target.`;
+            statusText.innerText = `Status: Optimal Policy Found! V*(s) converged in ${iterations} operations. Switch to 'Policy' view to see optimal paths.`;
             statusText.style.color = '#22c55e'; // success color
         }
 
